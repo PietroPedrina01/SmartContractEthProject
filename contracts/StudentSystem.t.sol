@@ -6,7 +6,7 @@ import "../contracts/StudentCareer.sol";
 
 contract TestStudentSystem {
     StudentFactory factory;
-    address fakeStudent = address(0x123);
+    address studentAddr = address(0x123);
 
     constructor() {
         factory = new StudentFactory();
@@ -16,19 +16,36 @@ contract TestStudentSystem {
         assert(factory.owner() == address(this));
     }
 
-    function testCreateCareerLogic() public {
-        factory.createCareer(fakeStudent);
-        address careerAddr = factory.studentToContract(fakeStudent);
+    function testCreateCareer() public {
+        factory.createCareer(studentAddr);
+        address careerAddr = factory.studentToContract(studentAddr);
         assert(careerAddr != address(0));
+
+        StudentCareer career = StudentCareer(careerAddr);
+        assert(career.studentAddress() == studentAddr);
     }
 
-    function testGradeValidation() public {
-        factory.createCareer(fakeStudent);
-        factory.registerGrade(fakeStudent, "Analisi", 28);
-        
-        StudentCareer career = StudentCareer(factory.studentToContract(fakeStudent));
-        assert(career.getExams().length == 1);
-        assert(keccak256(bytes(career.getExams()[0].name)) == keccak256(bytes("Analisi")));
-        assert(career.getExams()[0].grade == 28);
+    function testProposeGradeLogic() public {
+        factory.createCareer(studentAddr);
+        // L'admin (questo contratto) propone un voto
+        factory.proposeGrade(studentAddr, "Business intelligence", 30, 6);
+
+        StudentCareer career = StudentCareer(
+            factory.studentToContract(studentAddr)
+        );
+        (
+            string memory name,
+            uint8 grade,
+            uint8 credits,
+            ,
+            StudentCareer.ExamStatus status
+        ) = career.exams(0);
+
+        assert(
+            keccak256(bytes(name)) == keccak256(bytes("Business intelligence"))
+        );
+        assert(grade == 30);
+        assert(credits == 6);
+        assert(status == StudentCareer.ExamStatus.PENDING);
     }
 }

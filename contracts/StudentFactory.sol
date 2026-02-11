@@ -13,7 +13,7 @@ contract StudentFactory {
     address[] public allCareers;
 
     event CareerCreated(address indexed student, address contractAddress);
-    event GradeRegistered(address indexed student, string subject, uint8 grade);
+    event GradeProposed(address indexed student, string subject, uint8 grade);
 
     modifier onlyOwner() {
         if (msg.sender != owner) revert OnlyOwnerAllowed();
@@ -24,12 +24,9 @@ contract StudentFactory {
         owner = msg.sender;
     }
 
-    // external perché viene chiamata da un altro contratto (StudentContract) e costa meno di public
     function createCareer(address _student) external onlyOwner {
-        // Verifica che lo studente non abbia già un contratto
         if (studentToContract[_student] != address(0)) revert CareerAlreadyExists();
         
-        // Deploy del nuovo contratto
         StudentCareer newCareer = new StudentCareer(_student);
         address careerAddr = address(newCareer);
         
@@ -39,12 +36,19 @@ contract StudentFactory {
         emit CareerCreated(_student, careerAddr);
     }
 
-    function registerGrade(address _student, string calldata _subject, uint8 _grade) external onlyOwner {
+    // Ora includiamo anche i crediti
+    function proposeGrade(address _student, string calldata _subject, uint8 _grade, uint8 _credits) external onlyOwner {
         address careerAddress = studentToContract[_student];
-        // Verifica che lo studente abbia un contratto associato
         if (careerAddress == address(0)) revert StudentNotFound();
         
-        StudentCareer(careerAddress).addExam(_subject, _grade);
-        emit GradeRegistered(_student, _subject, _grade);
+        // Chiamiamo la funzione di proposta, non di registrazione diretta
+        StudentCareer(careerAddress).proposeExam(_subject, _grade, _credits);
+        
+        emit GradeProposed(_student, _subject, _grade);
+    }
+    
+    // Helper per il frontend/script
+    function getCareerAddress(address _student) external view returns (address) {
+        return studentToContract[_student];
     }
 }

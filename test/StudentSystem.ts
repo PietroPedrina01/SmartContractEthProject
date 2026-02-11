@@ -2,108 +2,275 @@ import assert from "node:assert/strict";
 import hre from "hardhat";
 import { describe, it } from "node:test";
 
+
 const { viem, networkHelpers } = await hre.network.connect();
 
-describe("Sistema Carriere Studenti", function () {
-  
-  // Fixture per resettare la blockchain locale prima di ogni test
-  async function deployFixture() {
-    const [admin, student, stranger] = await viem.getWalletClients();
-    const publicClient = await viem.getPublicClient();
+describe("Sistema Carriere - Integrazione", function () {
 
-    const factory = await viem.deployContract("StudentFactory");
+	async function deployFixture() {
+		const [admin, student, stranger] = await viem.getWalletClients();
+		const publicClient = await viem.getPublicClient();
+		const factory = await viem.deployContract("StudentFactory");
 
-    return { factory, admin, student, stranger, publicClient };
-  }
+		return { factory, admin, student, stranger, publicClient };
+	}
 
-  describe("Aggiunta Voti e Permessi", function () {
-    it("Dovrebbe permettere all'admin di registrare un voto e allo studente di vederlo", async function () {
-      const { factory, student, publicClient } = await networkHelpers.loadFixture(deployFixture);
+	it("Dovrebbe completare l'intero ciclo: Proposta -> Accettazione -> Laurea", async function () {
+		const { factory, admin, student } = await networkHelpers.loadFixture(deployFixture);
 
-      // 1. Creazione carriera
-      await factory.write.createCareer([student.account.address]);
-      const careerAddr = await factory.read.studentToContract([student.account.address]);
-      
-      // 2. Registrazione voto (Transazione dell'admin)
-      await factory.write.registerGrade([student.account.address, "Ingegneria del software", 30]);
+		// 1. Creazione Carriera
+		await factory.write.createCareer([student.account.address]);
+		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
+		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
 
-      // 3. Verifica (Lettura tramite Public Client)
-      const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
-      const exams = await careerContract.read.getExams();
-      
-      assert.equal(exams[0].name, "Ingegneria del software");
-      assert.equal(exams[0].grade, 30);
-    });
+		// 2. Proposta Voto (da Admin)
+		await factory.write.proposeGrade([student.account.address, "Basi di dati", 30, 180]);
 
-    it("Dovrebbe fallire se si prova a registrare un voto superiore a 31", async function () {
-      const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+		// 3. Accettazione Voto (da Studente - Qui usiamo l'account student)
+		await careerContract.write.acceptGrade([0n], { account: student.account });
 
-      await factory.write.createCareer([student.account.address]);
+		// 4. Verifica Crediti e Laurea
+		const credits = await careerContract.read.totalCredits();
+		assert.equal(credits, 180n);
 
-      await assert.rejects(
-        factory.write.registerGrade([student.account.address, "Complessità", 32]),
-        /InvalidGrade/
-      );
-    });
+		await careerContract.write.graduate({ account: student.account });
+		const isGraduated = await careerContract.read.isGraduated();
+		assert.strictEqual(isGraduated, true);
+	});
 
-    it("Dovrebbe fallire se si prova a registrare un voto inferiore a 18", async function () {
-      const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+	it("Dovrebbe fallire se un estraneo prova ad accettare un voto", async function () {
+		const { factory, student, stranger } = await networkHelpers.loadFixture(deployFixture);
+		await factory.write.createCareer([student.account.address]);
+		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
+		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
 
-      await factory.write.createCareer([student.account.address]);
+		await factory.write.proposeGrade([student.account.address, "Crittografia", 25, 6]);
 
-      await assert.rejects(
-        factory.write.registerGrade([student.account.address, "Basi di dati", 17]),
-        /InvalidGrade/
-      );
-    });
+		// Tentativo di accettazione da parte di 'stranger'
+		await assert.rejects(
+			careerContract.write.acceptGrade([0n], { account: stranger.account }),
+			/OnlyStudentAllowed/
+		);
+	});
 
-    it("Dovrebbe fallire se un msg.sender che non è factory prova a chiamare addExam", async function () {
-      const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+	it("Dovrebbe fallire la proposta di un voto invalido", async function () {
+		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+		await factory.write.createCareer([student.account.address]);
 
-      await factory.write.createCareer([student.account.address]);
-      const careerAddr = await factory.read.studentToContract([student.account.address]);
-      const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
+		await assert.rejects(
+			factory.write.proposeGrade([student.account.address, "Test", 35, 6]),
+			/InvalidGrade/
+		);
+	});
 
-      await assert.rejects(
-        careerContract.write.addExam(["Business intelligence", 28], {
-          account: student.account,
-        }),
-        /OnlyFactoryAllowed/
-      );
-    });
+	it("Dovrebbe fallire se lo studente prova a laurearsi senza crediti sufficienti", async function () {
+		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+		await factory.write.createCareer([student.account.address]);
+		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
+		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
 
-    it("Dovrebbe fallire se si prova a creare una carriera per uno studente che ne ha già una", async function () {
-      const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+		await assert.rejects(
+			careerContract.write.graduate({ account: student.account }),
+			/NotEnoughCredits/
+		);
+	});
 
-      await factory.write.createCareer([student.account.address]);
+	it("Dovrebbe fallire se un account non-owner prova a proporre un voto tramite Factory", async function () {
+		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
 
-      await assert.rejects(
-        factory.write.createCareer([student.account.address]),
-        /CareerAlreadyExists/
-      );
-    });
-    
-    it("Dovrebbe fallire se si prova a registrare un voto per uno studente senza carriera", async function () {
-      const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+		// Creiamo prima la carriera (fatto dall'admin di default)
+		await factory.write.createCareer([student.account.address]);
 
-      await assert.rejects(
-        factory.write.registerGrade([student.account.address, "Sistemi informativi aziendali", 25]),
-        /StudentNotFound/
-      );
-    });
+		// Lo studente prova a chiamare proposeGrade sulla Factory
+		await assert.rejects(
+			factory.write.proposeGrade(
+				[student.account.address, "Sicurezza", 31, 6],
+				{ account: student.account }
+			),
+			/OnlyOwnerAllowed/
+		);
+	});
 
-    it("Dovrebbe fallire se un account non autorizzato prova a registrare un voto", async function () {
-      const { factory, student, stranger } = await networkHelpers.loadFixture(deployFixture);
+	it("Dovrebbe fallire se qualcuno chiama direttamente proposeExam sul contratto carriera", async function () {
+		const { factory, student, stranger } = await networkHelpers.loadFixture(deployFixture);
 
-      await factory.write.createCareer([student.account.address]);
+		await factory.write.createCareer([student.account.address]);
+		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
+		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
 
-      // Proviamo a inviare la transazione usando l'account 'stranger'
-      await assert.rejects(
-        factory.write.registerGrade([student.account.address, "Software security", 31], {
-          account: stranger.account,
-        }),
-        /OnlyOwnerAllowed/
-      );
-    });
-  });
+		// Qualcuno (stranger o lo studente stesso) chiama proposeExam direttamente
+		await assert.rejects(
+			careerContract.write.proposeExam(
+				["Hacker Grade", 31, 180],
+				{ account: stranger.account }
+			),
+			/OnlyFactoryAllowed/
+		);
+		await assert.rejects(
+			careerContract.write.proposeExam(
+				["Hacker Grade", 31, 180],
+				{ account: student.account }
+			),
+			/OnlyFactoryAllowed/
+		);
+	});
+
+	it("Dovrebbe fallire se si prova a creare una carriera per uno studente già registrato", async function () {
+		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+
+		await factory.write.createCareer([student.account.address]);
+
+		// Proviamo a creare una seconda carriera per lo stesso studente
+		await assert.rejects(
+			factory.write.createCareer([student.account.address]),
+			/CareerAlreadyExists/
+		);
+	});
+
+	it("Dovrebbe fallire se si prova a proporre un voto per uno studente senza carriera", async function () {
+		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+
+		// Proviamo a proporre un voto per uno studente che non ha una carriera
+		await assert.rejects(
+			factory.write.proposeGrade([student.account.address, "Non Esistente", 30, 6]),
+			/StudentNotFound/
+		);
+	});
+
+	it("Dovrebbe fallire se si prova a proporre un voto ad uno studente già laureato", async function () {
+		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+
+		await factory.write.createCareer([student.account.address]);
+		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
+		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
+
+		// Proponiamo un voto e accettiamo per raggiungere i 180 crediti
+		await factory.write.proposeGrade([student.account.address, "Esame Finale", 30, 180]);
+		await careerContract.write.acceptGrade([0n], { account: student.account });
+
+		await careerContract.write.graduate({ account: student.account });
+
+		// Ora lo studente è laureato, proviamo a proporre un altro voto
+		await assert.rejects(
+			factory.write.proposeGrade([student.account.address, "Dopo Laurea", 30, 6]),
+			/AlreadyGraduated/
+		);
+	});
+
+	it("Dovrebbe fallire se uno studente prova ad accettare un voto per un esame che non esiste", async function () {
+		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+
+		await factory.write.createCareer([student.account.address]);
+		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
+		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
+
+		// Lo studente prova ad accettare un voto che non esiste
+		await assert.rejects(
+			careerContract.write.acceptGrade([0n], { account: student.account }),
+			/ExamNotFoundOrNotPending/
+		);
+	});
+
+	it("Dovrebbe fallire se uno studente prova ad accettare un voto che non è in stato PENDING", async function () {
+		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+
+		await factory.write.createCareer([student.account.address]);
+		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
+		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
+
+		// Proponiamo un voto e accettiamo per portarlo in stato REGISTERED
+		await factory.write.proposeGrade([student.account.address, "Esame", 30, 6]);
+		await careerContract.write.acceptGrade([0n], { account: student.account });
+
+		// Ora il voto è in stato REGISTERED, proviamo ad accettarlo di nuovo
+		await assert.rejects(
+			careerContract.write.acceptGrade([0n], { account: student.account }),
+			/ExamNotFoundOrNotPending/
+		);
+	});
+
+	it("Dovrebbe fallire se uno studente prova a rigettare un voto per un esame che non esiste", async function () {
+		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+
+		await factory.write.createCareer([student.account.address]);
+		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
+		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
+
+		// Lo studente prova a rigettare un voto che non esiste
+		await assert.rejects(
+			careerContract.write.rejectGrade([0n], { account: student.account }),
+			/ExamNotFoundOrNotPending/
+		);
+	});
+
+	it("Dovrebbe fallire se uno studente prova a rigettare un voto che non è in stato PENDING", async function () {
+		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+
+		await factory.write.createCareer([student.account.address]);
+		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
+		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
+
+		// Proponiamo un voto e accettiamo per portarlo in stato REGISTERED
+		await factory.write.proposeGrade([student.account.address, "Esame", 30, 6]);
+		await careerContract.write.acceptGrade([0n], { account: student.account });
+
+		// Ora il voto è in stato REGISTERED, proviamo a rigettarlo
+		await assert.rejects(
+			careerContract.write.rejectGrade([0n], { account: student.account }),
+			/ExamNotFoundOrNotPending/
+		);
+	});
+
+	it("Uno studente dovrebbe poter rigettare un voto proposto", async function () {
+		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+
+		await factory.write.createCareer([student.account.address]);
+		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
+		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
+
+		// Proponiamo un voto
+		await factory.write.proposeGrade([student.account.address, "Esame da Rigettare", 30, 6]);
+
+		// Lo studente rigetta il voto
+		await careerContract.write.rejectGrade([0n], { account: student.account });
+
+		// Verifichiamo che lo stato dell'esame sia stato aggiornato correttamente (ad esempio, potrebbe essere cancellato o marcato come REJECTED)
+		const exams = await careerContract.read.getExams();
+
+		assert.equal(exams.length, 1);
+		assert.equal(exams[0].name, "Esame da Rigettare");
+		assert.equal(exams[0].status, 3); // 3 <=> REJECTED
+	});
+
+	it("Dovrebbe calcolare correttamente la media pesata", async function () {
+		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+
+		await factory.write.createCareer([student.account.address]);
+		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
+		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
+
+		// Proponiamo e accettiamo più voti
+		await factory.write.proposeGrade([student.account.address, "Esame 1", 30, 6]);
+		await careerContract.write.acceptGrade([0n], { account: student.account });
+
+		await factory.write.proposeGrade([student.account.address, "Esame 2", 28, 12]);
+		await careerContract.write.acceptGrade([1n], { account: student.account });
+
+		// Calcoliamo la media pesata
+		const average = await careerContract.read.calculateAverage();
+
+		// La media pesata dovrebbe essere: ((30*6) + (28*12)) / (6 + 12) = (180 + 336) / 18 = 516 / 18 = 28.666... => moltiplichiamo per 100 per mantenere 2 decimali => 2866
+		assert.equal(average, 2866n);
+	});
+
+	it("Dovrebbe restituire 0 come media se non ci sono esami registrati", async function () {
+		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+
+		await factory.write.createCareer([student.account.address]);
+		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
+		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
+
+		const average = await careerContract.read.calculateAverage();
+		assert.equal(average, 0n);
+	});
 });
