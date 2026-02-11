@@ -28,6 +28,7 @@ contract StudentCareer {
 
     function addExam(string memory _name, uint8 _grade) external onlyFactory {
         if (_grade > 31) revert InvalidGrade(); // 31 = 30L
+        if (_grade < 18) revert InvalidGrade(); // Voto minimo per superare l'esame
         
         exams.push(Exam({
             name: _name,
