@@ -25,13 +25,13 @@ describe("Sistema Carriere Studenti", function () {
       const careerAddr = await factory.read.studentToContract([student.account.address]);
       
       // 2. Registrazione voto (Transazione dell'admin)
-      await factory.write.registerGrade([student.account.address, "Programmazione", 30]);
+      await factory.write.registerGrade([student.account.address, "Ingegneria del software", 30]);
 
       // 3. Verifica (Lettura tramite Public Client)
       const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
       const exams = await careerContract.read.getExams();
       
-      assert.equal(exams[0].name, "Programmazione");
+      assert.equal(exams[0].name, "Ingegneria del software");
       assert.equal(exams[0].grade, 30);
     });
 
@@ -41,7 +41,7 @@ describe("Sistema Carriere Studenti", function () {
       await factory.write.createCareer([student.account.address]);
 
       await assert.rejects(
-        factory.write.registerGrade([student.account.address, "Fisica", 32]),
+        factory.write.registerGrade([student.account.address, "Complessità", 32]),
         /InvalidGrade/
       );
     });
@@ -52,7 +52,7 @@ describe("Sistema Carriere Studenti", function () {
       await factory.write.createCareer([student.account.address]);
 
       await assert.rejects(
-        factory.write.registerGrade([student.account.address, "Chimica", 17]),
+        factory.write.registerGrade([student.account.address, "Basi di dati", 17]),
         /InvalidGrade/
       );
     });
@@ -65,7 +65,7 @@ describe("Sistema Carriere Studenti", function () {
       const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
 
       await assert.rejects(
-        careerContract.write.addExam(["Storia", 28], {
+        careerContract.write.addExam(["Business intelligence", 28], {
           account: student.account,
         }),
         /OnlyFactoryAllowed/
@@ -87,7 +87,7 @@ describe("Sistema Carriere Studenti", function () {
       const { factory, student } = await networkHelpers.loadFixture(deployFixture);
 
       await assert.rejects(
-        factory.write.registerGrade([student.account.address, "Geografia", 25]),
+        factory.write.registerGrade([student.account.address, "Sistemi informativi aziendali", 25]),
         /StudentNotFound/
       );
     });
@@ -99,7 +99,7 @@ describe("Sistema Carriere Studenti", function () {
 
       // Proviamo a inviare la transazione usando l'account 'stranger'
       await assert.rejects(
-        factory.write.registerGrade([student.account.address, "Hacking", 31], {
+        factory.write.registerGrade([student.account.address, "Software security", 31], {
           account: stranger.account,
         }),
         /OnlyOwnerAllowed/

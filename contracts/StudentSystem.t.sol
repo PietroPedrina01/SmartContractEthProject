@@ -24,7 +24,6 @@ contract TestStudentSystem {
 
     function testGradeValidation() public {
         factory.createCareer(fakeStudent);
-        // Qui testiamo la logica interna: la factory deve poter scrivere
         factory.registerGrade(fakeStudent, "Analisi", 28);
         
         StudentCareer career = StudentCareer(factory.studentToContract(fakeStudent));

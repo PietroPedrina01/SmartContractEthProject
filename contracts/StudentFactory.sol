@@ -41,6 +41,7 @@ contract StudentFactory {
 
     function registerGrade(address _student, string calldata _subject, uint8 _grade) external onlyOwner {
         address careerAddress = studentToContract[_student];
+        // Verifica che lo studente abbia un contratto associato
         if (careerAddress == address(0)) revert StudentNotFound();
         
         StudentCareer(careerAddress).addExam(_subject, _grade);
