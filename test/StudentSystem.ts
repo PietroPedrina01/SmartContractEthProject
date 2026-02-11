@@ -273,4 +273,43 @@ describe("Sistema Carriere - Integrazione", function () {
 		const average = await careerContract.read.calculateAverage();
 		assert.equal(average, 0n);
 	});
+
+	it("Laurea con media di 18 dovrebbe assegnare il voto di laurea minimo (66/110)", async function () {
+		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+
+		await factory.write.createCareer([student.account.address]);
+		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
+		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
+
+		// Proponiamo e accettiamo voti per raggiungere una media di 18
+		await factory.write.proposeGrade([student.account.address, "Esame 1", 18, 180]);
+		await careerContract.write.acceptGrade([0n], { account: student.account });
+
+		await careerContract.write.graduate({ account: student.account });
+
+		const finalAverage = await careerContract.read.finalAverage();
+		const baseGraduationVote = await careerContract.read.baseGraduationVote();
+		assert.equal(finalAverage, 1800n); // Media di 18.00
+		assert.equal(baseGraduationVote, 6600n); // Voto di laurea minimo 66/110
+	});
+
+	it("Laurea con media di 31 (30L) dovrebbe assegnare il voto di laurea massimo (110/110)", async function () {
+		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+
+		await factory.write.createCareer([student.account.address]);
+		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
+		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
+
+		// Proponiamo e accettiamo voti per raggiungere una media di 31 (30L)
+		await factory.write.proposeGrade([student.account.address, "Esame 1", 31, 180]);
+		await careerContract.write.acceptGrade([0n], { account: student.account });
+
+		await careerContract.write.graduate({ account: student.account });
+
+		const finalAverage = await careerContract.read.finalAverage();
+		const baseGraduationVote = await careerContract.read.baseGraduationVote();
+		assert.equal(finalAverage, 3100n); // Media di 31.00
+		assert.equal(baseGraduationVote, 11000n); // Voto di laurea massimo 110/110
+	});
+
 });
