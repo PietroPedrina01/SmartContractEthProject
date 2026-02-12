@@ -2,15 +2,6 @@
 pragma solidity ^0.8.28;
 
 contract StudentCareer {
-    // Errori custom
-    error OnlyFactoryAllowed();
-    error OnlyStudentAllowed();
-    error InvalidGrade();
-    error ExamAlreadyPassed();
-    error ExamNotFoundOrNotPending();
-    error AlreadyGraduated();
-    error NotEnoughCredits();
-
     // Enum per gestire lo stato di un esame
     enum ExamStatus {
         NON_EXISTENT,
@@ -46,17 +37,17 @@ contract StudentCareer {
     event BaseGraduationVoteSet(uint256 baseGraduationVote);
 
     modifier onlyFactory() {
-        if (msg.sender != factory) revert OnlyFactoryAllowed();
+        require(msg.sender == factory, "Only factory allowed");
         _;
     }
 
     modifier onlyStudent() {
-        if (msg.sender != studentAddress) revert OnlyStudentAllowed();
+        require(msg.sender == studentAddress, "Only student allowed");
         _;
     }
 
     modifier activeCareer() {
-        if (isGraduated) revert AlreadyGraduated();
+        require(!isGraduated, "Already graduated");
         _;
     }
 
@@ -71,7 +62,8 @@ contract StudentCareer {
         uint8 _grade,
         uint8 _credits
     ) external onlyFactory activeCareer {
-        if (_grade > 31 || _grade < 18) revert InvalidGrade();
+        require(_grade >= 18 && _grade <= 31, "Invalid grade");
+        require(_credits > 0, "Credits must be positive");
 
         exams.push(
             Exam({
@@ -79,7 +71,7 @@ contract StudentCareer {
                 grade: _grade,
                 credits: _credits,
                 date: block.timestamp,
-                status: ExamStatus.PENDING // Il voto è in attesa
+                status: ExamStatus.PENDING
             })
         );
 
@@ -88,10 +80,10 @@ contract StudentCareer {
 
     // Lo studente ACCETTA il voto (Interazione diretta Studente -> Contratto)
     function acceptGrade(uint256 _examIndex) external onlyStudent activeCareer {
-        if (_examIndex >= exams.length) revert ExamNotFoundOrNotPending();
+        require(_examIndex < exams.length, "Exam index out of bounds");
         Exam storage e = exams[_examIndex];
 
-        if (e.status != ExamStatus.PENDING) revert ExamNotFoundOrNotPending();
+        require(e.status == ExamStatus.PENDING, "Exam not pending");
 
         e.status = ExamStatus.REGISTERED;
         totalCredits += e.credits;
@@ -101,10 +93,10 @@ contract StudentCareer {
 
     // Funzione per rifiutare un voto (opzionale, ma carino)
     function rejectGrade(uint256 _examIndex) external onlyStudent activeCareer {
-        if (_examIndex >= exams.length) revert ExamNotFoundOrNotPending();
+        require(_examIndex < exams.length, "Exam index out of bounds");
         Exam storage e = exams[_examIndex];
 
-        if (e.status != ExamStatus.PENDING) revert ExamNotFoundOrNotPending();
+        require(e.status == ExamStatus.PENDING, "Exam not pending");
 
         // Se rifiuta, lo stato diventa REJECTED e non si aggiungono crediti
         e.status = ExamStatus.REJECTED;
@@ -135,7 +127,7 @@ contract StudentCareer {
 
     // Calcolo della laurea
     function graduate() external onlyStudent activeCareer {
-        if (totalCredits < 180) revert NotEnoughCredits();
+        require(totalCredits >= 180, "Not enough credits to graduate");
 
         // Salviamo la media al momento della laurea
         finalAverage = calculateAverage();

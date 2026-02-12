@@ -49,7 +49,7 @@ describe("Sistema Carriere - Integrazione", function () {
 		// Tentativo di accettazione da parte di 'stranger'
 		await assert.rejects(
 			careerContract.write.acceptGrade([0n], { account: stranger.account }),
-			/OnlyStudentAllowed/
+			"Only student allowed"
 		);
 	});
 
@@ -59,7 +59,7 @@ describe("Sistema Carriere - Integrazione", function () {
 
 		await assert.rejects(
 			factory.write.proposeGrade([student.account.address, "Test", 35, 6]),
-			/InvalidGrade/
+			"Invalid grade"
 		);
 	});
 
@@ -71,7 +71,7 @@ describe("Sistema Carriere - Integrazione", function () {
 
 		await assert.rejects(
 			careerContract.write.graduate({ account: student.account }),
-			/NotEnoughCredits/
+			/Not enough credits to graduate/
 		);
 	});
 
@@ -87,7 +87,7 @@ describe("Sistema Carriere - Integrazione", function () {
 				[student.account.address, "Sicurezza", 31, 6],
 				{ account: student.account }
 			),
-			/OnlyOwnerAllowed/
+			"Only owner allowed"
 		);
 	});
 
@@ -104,14 +104,14 @@ describe("Sistema Carriere - Integrazione", function () {
 				["Hacker Grade", 31, 180],
 				{ account: stranger.account }
 			),
-			/OnlyFactoryAllowed/
+			"Only factory allowed"
 		);
 		await assert.rejects(
 			careerContract.write.proposeExam(
 				["Hacker Grade", 31, 180],
 				{ account: student.account }
 			),
-			/OnlyFactoryAllowed/
+			"Only factory allowed"
 		);
 	});
 
@@ -123,7 +123,7 @@ describe("Sistema Carriere - Integrazione", function () {
 		// Proviamo a creare una seconda carriera per lo stesso studente
 		await assert.rejects(
 			factory.write.createCareer([student.account.address]),
-			/CareerAlreadyExists/
+			"Career already exists"
 		);
 	});
 
@@ -133,7 +133,7 @@ describe("Sistema Carriere - Integrazione", function () {
 		// Proviamo a proporre un voto per uno studente che non ha una carriera
 		await assert.rejects(
 			factory.write.proposeGrade([student.account.address, "Non Esistente", 30, 6]),
-			/StudentNotFound/
+			"Student not found"
 		);
 	});
 
@@ -153,7 +153,7 @@ describe("Sistema Carriere - Integrazione", function () {
 		// Ora lo studente è laureato, proviamo a proporre un altro voto
 		await assert.rejects(
 			factory.write.proposeGrade([student.account.address, "Dopo Laurea", 30, 6]),
-			/AlreadyGraduated/
+			"Already graduated"
 		);
 	});
 
@@ -167,7 +167,7 @@ describe("Sistema Carriere - Integrazione", function () {
 		// Lo studente prova ad accettare un voto che non esiste
 		await assert.rejects(
 			careerContract.write.acceptGrade([0n], { account: student.account }),
-			/ExamNotFoundOrNotPending/
+			"Exam not found or not pending"
 		);
 	});
 
@@ -185,7 +185,7 @@ describe("Sistema Carriere - Integrazione", function () {
 		// Ora il voto è in stato REGISTERED, proviamo ad accettarlo di nuovo
 		await assert.rejects(
 			careerContract.write.acceptGrade([0n], { account: student.account }),
-			/ExamNotFoundOrNotPending/
+			"Exam not found or not pending"
 		);
 	});
 
@@ -199,7 +199,7 @@ describe("Sistema Carriere - Integrazione", function () {
 		// Lo studente prova a rigettare un voto che non esiste
 		await assert.rejects(
 			careerContract.write.rejectGrade([0n], { account: student.account }),
-			/ExamNotFoundOrNotPending/
+			"Exam not found or not pending"
 		);
 	});
 
@@ -217,7 +217,7 @@ describe("Sistema Carriere - Integrazione", function () {
 		// Ora il voto è in stato REGISTERED, proviamo a rigettarlo
 		await assert.rejects(
 			careerContract.write.rejectGrade([0n], { account: student.account }),
-			/ExamNotFoundOrNotPending/
+			"Exam not pending"
 		);
 	});
 
