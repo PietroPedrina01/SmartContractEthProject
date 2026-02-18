@@ -1,0 +1,42 @@
+{
+  "_format": "hh3-sol-build-info-1",
+  "id": "solc-0_8_28-0e648970c5c0f7733457e9d134b250bbb948bedf",
+  "solcVersion": "0.8.28",
+  "solcLongVersion": "0.8.28+commit.7893614a",
+  "userSourceNameMap": {
+    "contracts/StudentFactory.sol": "project/contracts/StudentFactory.sol"
+  },
+  "input": {
+    "language": "Solidity",
+    "settings": {
+      "evmVersion": "cancun",
+      "optimizer": {
+        "enabled": true,
+        "runs": 200
+      },
+      "outputSelection": {
+        "*": {
+          "": [
+            "ast"
+          ],
+          "*": [
+            "abi",
+            "evm.bytecode",
+            "evm.deployedBytecode",
+            "evm.methodIdentifiers",
+            "metadata"
+          ]
+        }
+      },
+      "remappings": []
+    },
+    "sources": {
+      "project/contracts/StudentCareer.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\ncontract StudentCareer {\n    // Enum per gestire lo stato di un esame\n    enum ExamStatus {\n        NON_EXISTENT,\n        PENDING,\n        REGISTERED,\n        REJECTED\n    }\n\n    struct Exam {\n        string name;\n        uint8 grade;\n        uint8 credits;\n        uint256 date;\n        ExamStatus status;\n    }\n\n    address public immutable factory;\n    address public immutable studentAddress;\n\n    // Usiamo una mapping per gestire meglio gli stati per materia,\n    // oppure un array se vuoi permettere di rifare lo stesso esame (qui semplifico con array)\n    Exam[] public exams;\n\n    uint256 public totalCredits;\n    bool public isGraduated;\n    uint256 public finalAverage;\n    uint256 public baseGraduationVote;\n\n    event ExamProposed(string subject, uint8 grade, uint8 credits);\n    event ExamAccepted(string subject, uint8 grade);\n    event ExamRejected(string subject, uint8 grade);\n    event StudentGraduated(uint256 date);\n    event BaseGraduationVoteSet(uint256 baseGraduationVote);\n\n    modifier onlyFactory() {\n        require(msg.sender == factory, \"Only factory allowed\");\n        _;\n    }\n\n    modifier onlyStudent() {\n        require(msg.sender == studentAddress, \"Only student allowed\");\n        _;\n    }\n\n    modifier activeCareer() {\n        require(!isGraduated, \"Already graduated\");\n        _;\n    }\n\n    constructor(address _studentAddress) {\n        factory = msg.sender;\n        studentAddress = _studentAddress;\n    }\n\n    // Il professore (tramite Factory) PROPONE il voto\n    function proposeExam(\n        string memory _name,\n        uint8 _grade,\n        uint8 _credits\n    ) external onlyFactory activeCareer {\n        require(_grade >= 18 && _grade <= 31, \"Invalid grade\");\n        require(_credits > 0, \"Credits must be positive\");\n\n        exams.push(\n            Exam({\n                name: _name,\n                grade: _grade,\n                credits: _credits,\n                date: block.timestamp,\n                status: ExamStatus.PENDING\n            })\n        );\n\n        emit ExamProposed(_name, _grade, _credits);\n    }\n\n    // Lo studente ACCETTA il voto (Interazione diretta Studente -> Contratto)\n    function acceptGrade(uint256 _examIndex) external onlyStudent activeCareer {\n        require(_examIndex < exams.length, \"Exam index out of bounds\");\n        Exam storage e = exams[_examIndex];\n\n        require(e.status == ExamStatus.PENDING, \"Exam not pending\");\n\n        e.status = ExamStatus.REGISTERED;\n        totalCredits += e.credits;\n\n        emit ExamAccepted(e.name, e.grade);\n    }\n\n    // Funzione per rifiutare un voto (opzionale, ma carino)\n    function rejectGrade(uint256 _examIndex) external onlyStudent activeCareer {\n        require(_examIndex < exams.length, \"Exam index out of bounds\");\n        Exam storage e = exams[_examIndex];\n\n        require(e.status == ExamStatus.PENDING, \"Exam not pending\");\n\n        // Se rifiuta, lo stato diventa REJECTED e non si aggiungono crediti\n        e.status = ExamStatus.REJECTED;\n        emit ExamRejected(e.name, e.grade);\n    }\n\n    // Calcola la media pesata moltiplicata per 100 per mantenere 2 decimali\n    // Esempio per il problema del floating point imprecision (faccio prima la moltiplicazione e poi la divisione)\n    function calculateAverage() public view returns (uint256) {\n        uint256 totalWeightedGrades = 0;\n        uint256 registeredCredits = 0;\n        uint256 count = 0;\n\n        for (uint256 i = 0; i < exams.length; i++) {\n            if (exams[i].status == ExamStatus.REGISTERED) {\n                totalWeightedGrades +=\n                    uint256(exams[i].grade) *\n                    uint256(exams[i].credits);\n                registeredCredits += uint256(exams[i].credits);\n                count++;\n            }\n        }\n\n        if (registeredCredits == 0) return 0;\n\n        return (totalWeightedGrades * 100) / registeredCredits;\n    }\n\n    // Calcolo della laurea\n    function graduate() external onlyStudent activeCareer {\n        require(totalCredits >= 180, \"Not enough credits to graduate\");\n\n        // Salviamo la media al momento della laurea\n        finalAverage = calculateAverage();\n        baseGraduationVote = (finalAverage * 110) / 30;\n        // Il controllo if (baseGraduationVote < 6600) baseGraduationVote = 6600; non è necessario perché non è possibile una media sotto il 18\n        if (baseGraduationVote > 11000) baseGraduationVote = 11000; // Limitiamo a 110\n        isGraduated = true;\n\n        emit StudentGraduated(block.timestamp);\n        emit BaseGraduationVoteSet(baseGraduationVote);\n    }\n\n    function getExams() external view returns (Exam[] memory) {\n        return exams;\n    }\n}\n"
+      },
+      "project/contracts/StudentFactory.sol": {
+        "content": "// SPDX-License-Identifier: MIT\npragma solidity ^0.8.28;\n\nimport \"./StudentCareer.sol\";\n\ncontract StudentFactory {\n    address public immutable owner;\n    mapping(address => address) public studentToContract;\n    address[] public allCareers;\n\n    event CareerCreated(address indexed student, address contractAddress);\n    event GradeProposed(address indexed student, string subject, uint8 grade);\n\n    modifier onlyOwner() {\n        require(msg.sender == owner, \"Only owner allowed\");\n        _;\n    }\n\n    constructor() {\n        owner = msg.sender;\n    }\n\n    function createCareer(address _student) external onlyOwner {\n        require(\n            studentToContract[_student] == address(0),\n            \"Career already exists\"\n        );\n\n        StudentCareer newCareer = new StudentCareer(_student);\n        address careerAddr = address(newCareer);\n\n        studentToContract[_student] = careerAddr;\n        allCareers.push(careerAddr);\n\n        emit CareerCreated(_student, careerAddr);\n    }\n\n    // Ora includiamo anche i crediti\n    function proposeGrade(\n        address _student,\n        string calldata _subject,\n        uint8 _grade,\n        uint8 _credits\n    ) external onlyOwner {\n        address careerAddress = studentToContract[_student];\n        require(careerAddress != address(0), \"Student not found\");\n\n        // Chiamiamo la funzione di proposta, non di registrazione diretta\n        StudentCareer(careerAddress).proposeExam(_subject, _grade, _credits);\n\n        emit GradeProposed(_student, _subject, _grade);\n    }\n\n    // Helper per il frontend/script\n    function getCareerAddress(\n        address _student\n    ) external view returns (address) {\n        return studentToContract[_student];\n    }\n}\n"
+      }
+    }
+  }
+}

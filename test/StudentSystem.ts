@@ -8,22 +8,21 @@ const { viem, networkHelpers } = await hre.network.connect();
 describe("Sistema Carriere - Integrazione", function () {
 
 	async function deployFixture() {
-		const [admin, student, stranger] = await viem.getWalletClients();
-		const publicClient = await viem.getPublicClient();
+		const [owner, student, stranger] = await viem.getWalletClients();
 		const factory = await viem.deployContract("StudentFactory");
 
-		return { factory, admin, student, stranger, publicClient };
+		return { owner, factory, student, stranger };
 	}
 
 	it("Dovrebbe completare l'intero ciclo: Proposta -> Accettazione -> Laurea", async function () {
-		const { factory, admin, student } = await networkHelpers.loadFixture(deployFixture);
+		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
 
 		// 1. Creazione Carriera
 		await factory.write.createCareer([student.account.address]);
 		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
 		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
 
-		// 2. Proposta Voto (da Admin)
+		// 2. Proposta Voto
 		await factory.write.proposeGrade([student.account.address, "Basi di dati", 30, 180]);
 
 		// 3. Accettazione Voto (da Studente - Qui usiamo l'account student)
@@ -71,14 +70,14 @@ describe("Sistema Carriere - Integrazione", function () {
 
 		await assert.rejects(
 			careerContract.write.graduate({ account: student.account }),
-			/Not enough credits to graduate/
+			"Not enough credits to graduate"
 		);
 	});
 
 	it("Dovrebbe fallire se un account non-owner prova a proporre un voto tramite Factory", async function () {
 		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
 
-		// Creiamo prima la carriera (fatto dall'admin di default)
+		// Creiamo prima la carriera
 		await factory.write.createCareer([student.account.address]);
 
 		// Lo studente prova a chiamare proposeGrade sulla Factory
