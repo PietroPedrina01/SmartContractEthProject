@@ -1,10 +1,8 @@
 # Sistema Gestione Carriere Studenti (Ethereum)
-
 Progetto per l'esame di **Introduzione alla Programmazione di Smart Contract**.
 Il sistema permette la gestione di carriere universitarie su blockchain attraverso il **Factory Pattern**, garantendo immutabilità, sicurezza e determinismo nei calcoli.
 
 ## Architettura del Progetto
-
 Il progetto si basa su due smart contract principali:
 - **StudentFactory**: Gestisce il registro degli studenti e il deploy dei singoli contratti carriera. Solo l'Owner (Università) può creare nuove carriere e proporre voti.
 - **StudentCareer**: Contratto individuale per ogni studente. Gestisce il workflow dei voti (Proposta -> Accettazione/Rifiuto), il calcolo della media pesata e lo stato di laurea.
@@ -17,7 +15,6 @@ Il progetto si basa su due smart contract principali:
 ---
 
 ## Requisiti e Installazione
-
 Assicurati di avere [Node.js](https://nodejs.org/) e `npm` installati.
 
 1. Clonare la repository o scaricare i file del progetto.
@@ -34,6 +31,49 @@ Test d'integrazione in TypeScript + Viem:
 ```
 npx hardhat test test/StudentSystem.ts
 ```
+
+# Simulazione
+Per far partire una piccola simulazione basta fare:
+1. Compilazione di contratti e test Solidity
+```
+npx hardhat compile
+```
+2. Avviare un simulatore di blockchain sul computer (indirizzo: http://127.0.0.1:8545/)
+```
+npx hardhat node
+```
+3. Aprire un nuovo terminale
+4. Avviare la simulazione su localhost
+```
+npx hardhat run simulation/simulate.ts --network localhost
+```
+Il risultato dovrebbe essere il seguente:
+```
+=== SIMULAZIONE ===
+
+Owner: [indirizzo Owner]
+Student: [indirizzo Student]
+Factory deployata a: [indirizzo Factory]
+
+
+>> Stato Attuale:
+   Crediti: 0
+   Media:   0.00
+   Laureato: NO
+
+>> Stato Attuale:
+   Crediti: 90
+   Media:   30.00
+   Laureato: NO
+
+>> Stato Attuale:
+   Crediti: 180
+   Media:   29.50
+   Laureato: SÌ
+
+Simulazione completata
+```
+
 
 # Simulazione interattiva
 Le varie azioni possibili sono:

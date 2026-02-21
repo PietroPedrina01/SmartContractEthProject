@@ -28,13 +28,14 @@ contract StudentCareer {
     uint256 public totalCredits;
     bool public isGraduated;
     uint256 public finalAverage;
-    uint256 public baseGraduationVote;
+    uint256 public finalGrade;
+    bool public hasHonors;
 
     event ExamProposed(string subject, uint8 grade, uint8 credits);
     event ExamAccepted(string subject, uint8 grade);
     event ExamRejected(string subject, uint8 grade);
     event StudentGraduated(uint256 date);
-    event BaseGraduationVoteSet(uint256 baseGraduationVote);
+    event FinalGradeSet(uint256 finalGrade, bool hasHonors);
 
     modifier onlyFactory() {
         require(msg.sender == factory, "Only factory allowed");
@@ -131,13 +132,16 @@ contract StudentCareer {
 
         // Salviamo la media al momento della laurea
         finalAverage = calculateAverage();
-        baseGraduationVote = (finalAverage * 110) / 30;
-        // Il controllo if (baseGraduationVote < 6600) baseGraduationVote = 6600; non è necessario perché non è possibile una media sotto il 18
-        if (baseGraduationVote > 11000) baseGraduationVote = 11000; // Limitiamo a 110
+        finalGrade = (finalAverage * 110) / 30;
+        // Il controllo if (finalGrade < 6600) finalGrade = 6600; non è necessario perché non è possibile una media sotto il 18
+        if (finalGrade > 11000) {
+            finalGrade = 11000; // Limitiamo a 110
+            hasHonors = true; // Se supera 110, assegniamo la lode
+        }
         isGraduated = true;
 
         emit StudentGraduated(block.timestamp);
-        emit BaseGraduationVoteSet(baseGraduationVote);
+        emit FinalGradeSet(finalGrade, hasHonors);
     }
 
     function getExams() external view returns (Exam[] memory) {

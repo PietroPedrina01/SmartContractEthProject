@@ -6,7 +6,7 @@ async function main() {
     // fondamentale che owner sia primo in quanto è il primo di questi che deploya la factory
     const [owner, student] = await viem.getWalletClients();
 
-    console.log("=== SIMULAZIONE ===");
+    console.log("\n=== SIMULAZIONE ===\n");
     console.log("Owner:", owner.account.address);
     console.log("Student:", student.account.address);
 
@@ -15,6 +15,7 @@ async function main() {
     console.log("Factory deployata a:", factory.address);
 
     // Creazione carriera
+    console.log("\nCreazione carriera per lo studente...");
     await factory.write.createCareer([student.account.address]);
 
     const careerAddr = await factory.read.getCareerAddress([
@@ -23,9 +24,10 @@ async function main() {
 
     const career = await viem.getContractAt("StudentCareer", careerAddr);
 
-    await log(career);
+    await logStatus(career);
 
     // Proposta voto 1
+    console.log("\nProposta voto 1: Basi di dati - 30");
     await factory.write.proposeGrade([
         student.account.address,
         "Basi di dati",
@@ -34,44 +36,74 @@ async function main() {
     ]);
 
     // Accettazione 1
+    console.log("Accettazione voto 1");
     await career.write.acceptGrade([0n], {
         account: student.account,
     });
 
-    await log(career);
+    await logStatus(career);
 
     // Proposta voto 2
+    console.log("\nProposta voto 2: Business intelligence - 18");
     await factory.write.proposeGrade([
         student.account.address,
         "Business intelligence",
-        29,
+        18,
         90,
     ]);
 
-    // Accettazione 2
-    await career.write.acceptGrade([1n], {
+    // Rifiuto 2
+    console.log("Rifiuto voto 2");
+    await career.write.rejectGrade([1n], {
         account: student.account,
     });
 
+    await logStatus(career);
+
+    // Proposta voto 3
+    console.log("\nProposta voto 3: Business intelligence - 30 e lode");
+    await factory.write.proposeGrade([
+        student.account.address,
+        "Business intelligence",
+        31,
+        90,
+    ]);
+
+    // Accettazione 3
+    console.log("Accettazione voto 3");
+    await career.write.acceptGrade([2n], {
+        account: student.account,
+    });
+
+    await logStatus(career);
+
     // Laurea
+    console.log("\nTentativo di laurea...");
     await career.write.graduate({
         account: student.account,
     });
 
-    await log(career);
+    await logStatus(career);
+    const finalGrade = await career.read.finalGrade();
+    const hasHonors = await career.read.hasHonors();
+    console.log("\nLaurea ottenuta con una votazione finale di: " + (Number(finalGrade) / 100).toFixed(2) + (await cumLaude(hasHonors)));
 
-    console.log("Simulazione completata");
+    console.log("\nSimulazione completata\n");
 }
 
-async function log(career: any) {
+async function logStatus(career: any) {
     const credits = await career.read.totalCredits();
-    console.log("Crediti totali:", credits.toString());
-
     const avg = await career.read.calculateAverage();
-    console.log("Media:", (Number(avg) / 100).toFixed(2));
-
     const graduated = await career.read.isGraduated();
-    console.log("Laureato:", graduated);
+
+    console.log("\n>> Stato Attuale:");
+    console.log(`   Crediti: ${credits}`);
+    console.log(`   Media:   ${(Number(avg) / 100).toFixed(2)}`);
+    console.log(`   Laureato: ${graduated ? "SÌ" : "NO"}`);
+}
+
+async function cumLaude(hasHonors: boolean) {
+    return hasHonors ? " e lode" : "";
 }
 
 main().catch((err) => {

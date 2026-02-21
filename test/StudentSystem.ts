@@ -287,9 +287,11 @@ describe("Sistema Carriere - Integrazione", function () {
 		await careerContract.write.graduate({ account: student.account });
 
 		const finalAverage = await careerContract.read.finalAverage();
-		const baseGraduationVote = await careerContract.read.baseGraduationVote();
+		const finalGrade = await careerContract.read.finalGrade();
+		const hasHonors = await careerContract.read.hasHonors();
 		assert.equal(finalAverage, 1800n); // Media di 18.00
-		assert.equal(baseGraduationVote, 6600n); // Voto di laurea minimo 66/110
+		assert.equal(finalGrade, 6600n); // Voto di laurea minimo 66/110
+		assert.equal(hasHonors, false);
 	});
 
 	it("Laurea con media di 31 (30L) dovrebbe assegnare il voto di laurea massimo (110/110)", async function () {
@@ -306,9 +308,11 @@ describe("Sistema Carriere - Integrazione", function () {
 		await careerContract.write.graduate({ account: student.account });
 
 		const finalAverage = await careerContract.read.finalAverage();
-		const baseGraduationVote = await careerContract.read.baseGraduationVote();
+		const finalGrade = await careerContract.read.finalGrade();
+		const hasHonors = await careerContract.read.hasHonors();
 		assert.equal(finalAverage, 3100n); // Media di 31.00
-		assert.equal(baseGraduationVote, 11000n); // Voto di laurea massimo 110/110
+		assert.equal(finalGrade, 11000n); // Voto di laurea massimo 110/110
+		assert.equal(hasHonors, true);
 	});
 
 });
