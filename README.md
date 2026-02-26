@@ -10,17 +10,12 @@ Il progetto si basa su due smart contract principali:
 ### Caratteristiche principali:
 - **Workflow Interattivo**: I voti non sono imposti, devono essere accettati formalmente dallo studente tramite il proprio wallet.
 - **Aritmetica Deterministica**: Il calcolo della media pesata è eseguito on-chain evitando perdite di precisione (Fixed Point Arithmetic) ed eseguendo la divisione solo come operazione finale.
-- **Sicurezza**: Accesso protetto tramite modificatori personalizzati (`onlyOwner`, `onlyStudent`, `onlyFactory`) e gestione degli errori tramite Custom Errors per il risparmio di gas.
+- **Sicurezza**: Accesso protetto tramite modificatori personalizzati (`onlyOwner`, `onlyStudent`, `onlyFactory`) e gestione degli errori tramite require().
 
 ---
 
 ## Requisiti e Installazione
 Assicurati di avere [Node.js](https://nodejs.org/) e `npm` installati.
-
-1. Clonare la repository o scaricare i file del progetto.
-2. Installare le dipendenze:
-   ```bash
-   npm install
 
 # Testing 
 Test unitari in Solidity:
@@ -34,7 +29,7 @@ npx hardhat test test/StudentSystem.ts
 
 # Simulazione
 Per far partire una piccola simulazione basta fare:
-1. Compilazione di contratti e test Solidity
+1. Compilare i contratti e i test in Solidity
 ```
 npx hardhat compile
 ```
@@ -55,23 +50,48 @@ Owner: [indirizzo Owner]
 Student: [indirizzo Student]
 Factory deployata a: [indirizzo Factory]
 
+Creazione carriera per lo studente...
 
 >> Stato Attuale:
    Crediti: 0
    Media:   0.00
    Laureato: NO
 
+Proposta voto 1: Basi di dati - 30
+Accettazione voto 1
+
 >> Stato Attuale:
    Crediti: 90
    Media:   30.00
    Laureato: NO
 
+Proposta voto 2: Business intelligence - 18
+Rifiuto voto 2
+
+>> Stato Attuale:
+   Crediti: 90
+   Media:   30.00
+   Laureato: NO
+
+Proposta voto 3: Business intelligence - 30 e lode
+Accettazione voto 3
+
 >> Stato Attuale:
    Crediti: 180
-   Media:   29.50
+   Media:   30.50
+   Laureato: NO
+
+Tentativo di laurea...
+
+>> Stato Attuale:
+   Crediti: 180
+   Media:   30.50
    Laureato: SÌ
 
+Laurea ottenuta con una votazione finale di: 110.00 e lode
+
 Simulazione completata
+
 ```
 
 

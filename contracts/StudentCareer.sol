@@ -92,7 +92,7 @@ contract StudentCareer {
         emit ExamAccepted(e.name, e.grade);
     }
 
-    // Funzione per rifiutare un voto (opzionale, ma carino)
+    // Lo studente RIFIUTA il voto
     function rejectGrade(uint256 _examIndex) external onlyStudent activeCareer {
         require(_examIndex < exams.length, "Exam index out of bounds");
         Exam storage e = exams[_examIndex];
@@ -133,7 +133,9 @@ contract StudentCareer {
         // Salviamo la media al momento della laurea
         finalAverage = calculateAverage();
         finalGrade = (finalAverage * 110) / 30;
+
         // Il controllo if (finalGrade < 6600) finalGrade = 6600; non è necessario perché non è possibile una media sotto il 18
+
         if (finalGrade > 11000) {
             finalGrade = 11000; // Limitiamo a 110
             hasHonors = true; // Se supera 110, assegniamo la lode
