@@ -20,6 +20,7 @@ contract StudentFactory {
         owner = msg.sender;
     }
 
+    // Creazione della carriera di uno studente
     function createCareer(address _student) external onlyOwner {
         require(
             studentToContract[_student] == address(0),
@@ -35,7 +36,7 @@ contract StudentFactory {
         emit CareerCreated(_student, careerAddr);
     }
 
-    // Ora includiamo anche i crediti
+    // Il professore PROPONE il voto richiamando StudentCareer
     function proposeGrade(
         address _student,
         string calldata _subject,
