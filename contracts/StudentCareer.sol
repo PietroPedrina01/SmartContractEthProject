@@ -108,7 +108,6 @@ contract StudentCareer {
     function calculateAverage() public view returns (uint256) {
         uint256 totalWeightedGrades = 0;
         uint256 registeredCredits = 0;
-        uint256 count = 0;
 
         for (uint256 i = 0; i < exams.length; i++) {
             if (exams[i].status == ExamStatus.REGISTERED) {
@@ -116,10 +115,10 @@ contract StudentCareer {
                     uint256(exams[i].grade) *
                     uint256(exams[i].credits);
                 registeredCredits += uint256(exams[i].credits);
-                count++;
             }
         }
 
+        // Evita la divisione per 0
         if (registeredCredits == 0) return 0;
 
         return (totalWeightedGrades * 100) / registeredCredits;
