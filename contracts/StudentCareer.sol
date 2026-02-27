@@ -21,8 +21,7 @@ contract StudentCareer {
     address public immutable factory;
     address public immutable studentAddress;
 
-    // Usiamo una mapping per gestire meglio gli stati per materia,
-    // oppure un array se vuoi permettere di rifare lo stesso esame (qui semplifico con array)
+    // Lista pubblica di esami
     Exam[] public exams;
 
     uint256 public totalCredits;
@@ -105,7 +104,7 @@ contract StudentCareer {
     }
 
     // Calcola la media pesata moltiplicata per 100 per mantenere 2 decimali
-    // Esempio per il problema del floating point imprecision (faccio prima la moltiplicazione e poi la divisione)
+    // Esempio per il problema del floating-point imprecision (faccio prima la moltiplicazione e poi la divisione)
     function calculateAverage() public view returns (uint256) {
         uint256 totalWeightedGrades = 0;
         uint256 registeredCredits = 0;
