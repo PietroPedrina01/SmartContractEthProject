@@ -25,7 +25,7 @@ describe("Sistema Carriere - Integrazione", function () {
 		// 2. Proposta Voto
 		await factory.write.proposeGrade([student.account.address, "Basi di dati", 30, 180]);
 
-		// 3. Accettazione Voto (da Studente - Qui usiamo l'account student)
+		// 3. Accettazione Voto
 		await careerContract.write.acceptGrade([0n], { account: student.account });
 
 		// 4. Verifica Crediti e Laurea
@@ -258,7 +258,7 @@ describe("Sistema Carriere - Integrazione", function () {
 		// Calcoliamo la media pesata
 		const average = await careerContract.read.calculateAverage();
 
-		// La media pesata dovrebbe essere: ((30*6) + (28*12)) / (6 + 12) = (180 + 336) / 18 = 516 / 18 = 28.666... => moltiplichiamo per 100 per mantenere 2 decimali => 2866
+		// La media pesata dovrebbe essere: ((30*6)+(28*12)) / (6+12) = 516 / 18 = 28.666... => moltiplichiamo per 100 per mantenere 2 decimali => 2866
 		assert.equal(average, 2866n);
 	});
 

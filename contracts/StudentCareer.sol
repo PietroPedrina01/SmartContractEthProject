@@ -100,6 +100,7 @@ contract StudentCareer {
 
         // Se rifiuta, lo stato diventa REJECTED e non si aggiungono crediti
         e.status = ExamStatus.REJECTED;
+
         emit ExamRejected(e.name, e.grade);
     }
 
