@@ -136,7 +136,7 @@ contract StudentCareer {
             }
         }
 
-        // evita la divisione per 0
+        // Evita la divisione per 0
         if (registeredCredits == 0) return 0;
 
         return (totalWeightedGrades * 100) / registeredCredits;
@@ -150,7 +150,7 @@ contract StudentCareer {
         _finalAverage = calculateAverage();
         _finalGrade = (_finalAverage * 110) / 30;
 
-        // il controllo if (_finalGrade < 6600) _finalGrade = 6600; non è necessario perché non è possibile una media sotto il 18
+        // Il controllo if (_finalGrade < 6600) _finalGrade = 6600; non è necessario perché non è possibile una media sotto il 18
 
         if (_finalGrade > 11000) {
             _finalGrade = 11000; // Limitiamo a 110
