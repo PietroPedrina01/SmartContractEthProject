@@ -39,6 +39,7 @@ describe("Sistema Carriere - Integrazione", function () {
 
 	it("Dovrebbe fallire se un estraneo prova ad accettare un voto", async function () {
 		const { factory, student, stranger } = await networkHelpers.loadFixture(deployFixture);
+
 		await factory.write.createCareer([student.account.address]);
 		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
 		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);
@@ -54,6 +55,7 @@ describe("Sistema Carriere - Integrazione", function () {
 
 	it("Dovrebbe fallire la proposta di un voto invalido", async function () {
 		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+
 		await factory.write.createCareer([student.account.address]);
 
 		await assert.rejects(
@@ -64,6 +66,7 @@ describe("Sistema Carriere - Integrazione", function () {
 
 	it("Dovrebbe fallire se lo studente prova a laurearsi senza crediti sufficienti", async function () {
 		const { factory, student } = await networkHelpers.loadFixture(deployFixture);
+
 		await factory.write.createCareer([student.account.address]);
 		const careerAddr = await factory.read.getCareerAddress([student.account.address]);
 		const careerContract = await viem.getContractAt("StudentCareer", careerAddr);

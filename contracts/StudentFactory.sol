@@ -51,13 +51,12 @@ contract StudentFactory {
         address careerAddress = _studentToContract[student];
         require(careerAddress != address(0), "Student not found");
 
-        // Chiamiamo la funzione di proposta, non di registrazione diretta
+        // chiamiamo la funzione di proposta, non di registrazione diretta
         StudentCareer(careerAddress).proposeExam(subject, grade, credits);
 
         emit GradeProposed(student, subject, grade, credits);
     }
 
-    // Helper per il frontend/script
     function getCareerAddress(address student) external view returns (address) {
         return _studentToContract[student];
     }
