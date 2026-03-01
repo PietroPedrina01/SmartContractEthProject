@@ -84,17 +84,17 @@ async function main() {
     });
 
     await logStatus(career);
-    const finalGrade = await career.read.finalGrade();
-    const hasHonors = await career.read.hasHonors();
+    const finalGrade = await career.read._finalGrade();
+    const hasHonors = await career.read._hasHonors();
     console.log("\nLaurea ottenuta con una votazione finale di: " + (Number(finalGrade) / 100).toFixed(2) + (await cumLaude(hasHonors)));
 
     console.log("\nSimulazione completata\n");
 }
 
 async function logStatus(career: any) {
-    const credits = await career.read.totalCredits();
+    const credits = await career.read._totalCredits();
     const avg = await career.read.calculateAverage();
-    const graduated = await career.read.isGraduated();
+    const graduated = await career.read._isGraduated();
 
     console.log("\n>> Stato Attuale:");
     console.log(`   Crediti: ${credits}`);

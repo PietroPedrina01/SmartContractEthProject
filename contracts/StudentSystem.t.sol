@@ -13,16 +13,16 @@ contract TestStudentSystem {
     }
 
     function testInitialization() public view {
-        assert(factory.owner() == address(this));
+        assert(factory._owner() == address(this));
     }
 
     function testCreateCareer() public {
         factory.createCareer(studentAddr);
-        address careerAddr = factory.studentToContract(studentAddr);
+        address careerAddr = factory._studentToContract(studentAddr);
         assert(careerAddr != address(0));
 
         StudentCareer career = StudentCareer(careerAddr);
-        assert(career.studentAddress() == studentAddr);
+        assert(career._studentAddress() == studentAddr);
     }
 
     function testProposeGradeLogic() public {
@@ -31,7 +31,7 @@ contract TestStudentSystem {
         factory.proposeGrade(studentAddr, "Business intelligence", 30, 6);
 
         StudentCareer career = StudentCareer(
-            factory.studentToContract(studentAddr)
+            factory._studentToContract(studentAddr)
         );
         (
             string memory name,
@@ -39,7 +39,7 @@ contract TestStudentSystem {
             uint8 credits,
             ,
             StudentCareer.ExamStatus status
-        ) = career.exams(0);
+        ) = career._exams(0);
 
         assert(
             keccak256(bytes(name)) == keccak256(bytes("Business intelligence"))

@@ -18,90 +18,107 @@ contract StudentCareer {
         ExamStatus status;
     }
 
-    address public immutable factory;
-    address public immutable studentAddress;
+    address public immutable _factory;
+    address public immutable _studentAddress;
 
     // Lista pubblica di esami
-    Exam[] public exams;
+    Exam[] public _exams;
 
-    uint256 public totalCredits;
-    bool public isGraduated;
-    uint256 public finalAverage;
-    uint256 public finalGrade;
-    bool public hasHonors;
+    uint256 public _totalCredits;
+    bool public _isGraduated;
+    uint256 public _finalAverage;
+    uint256 public _finalGrade;
+    bool public _hasHonors;
 
-    event ExamProposed(string subject, uint8 grade, uint8 credits);
-    event ExamAccepted(string subject, uint8 grade);
-    event ExamRejected(string subject, uint8 grade);
+    event ExamProposed(
+        string subject,
+        uint8 grade,
+        uint8 credits,
+        uint256 date
+    );
+    event ExamAccepted(
+        string subject,
+        uint8 grade,
+        uint8 credits,
+        uint256 date
+    );
+    event ExamRejected(
+        string subject,
+        uint8 grade,
+        uint8 credits,
+        uint256 date
+    );
     event StudentGraduated(uint256 date);
     event FinalGradeSet(uint256 finalGrade, bool hasHonors);
 
     modifier onlyFactory() {
-        require(msg.sender == factory, "Only factory allowed");
+        require(msg.sender == _factory, "Only factory allowed");
         _;
     }
 
     modifier onlyStudent() {
-        require(msg.sender == studentAddress, "Only student allowed");
+        require(msg.sender == _studentAddress, "Only student allowed");
         _;
     }
 
     modifier activeCareer() {
-        require(!isGraduated, "Already graduated");
+        require(!_isGraduated, "Already graduated");
         _;
     }
 
-    constructor(address _studentAddress) {
-        factory = msg.sender;
-        studentAddress = _studentAddress;
+    constructor(address studentAddress) {
+        _factory = msg.sender;
+        _studentAddress = studentAddress;
     }
 
     // Il professore (tramite Factory) PROPONE il voto
     function proposeExam(
-        string memory _name,
-        uint8 _grade,
-        uint8 _credits
+        string memory name,
+        uint8 grade,
+        uint8 credits
     ) external onlyFactory activeCareer {
-        require(_grade >= 18 && _grade <= 31, "Invalid grade");
-        require(_credits > 0, "Credits must be positive");
+        require(grade >= 18 && grade <= 31, "Invalid grade");
+        require(credits > 0, "Credits must be positive");
 
-        exams.push(
+        uint256 ts = block.timestamp;
+
+        _exams.push(
             Exam({
-                name: _name,
-                grade: _grade,
-                credits: _credits,
-                date: block.timestamp,
+                name: name,
+                grade: grade,
+                credits: credits,
+                date: ts,
                 status: ExamStatus.PENDING
             })
         );
 
-        emit ExamProposed(_name, _grade, _credits);
+        emit ExamProposed(name, grade, credits, ts);
     }
 
     // Lo studente ACCETTA il voto (Interazione diretta Studente -> Contratto)
-    function acceptGrade(uint256 _examIndex) external onlyStudent activeCareer {
-        require(_examIndex < exams.length, "Exam index out of bounds");
-        Exam storage e = exams[_examIndex];
+    function acceptGrade(uint256 examIndex) external onlyStudent activeCareer {
+        require(examIndex < _exams.length, "Exam index out of bounds");
+        Exam storage e = _exams[examIndex];
 
         require(e.status == ExamStatus.PENDING, "Exam not pending");
 
         e.status = ExamStatus.REGISTERED;
-        totalCredits += e.credits;
+        _totalCredits += e.credits;
 
-        emit ExamAccepted(e.name, e.grade);
+        emit ExamAccepted(e.name, e.grade, e.credits, block.timestamp);
     }
 
     // Lo studente RIFIUTA il voto
-    function rejectGrade(uint256 _examIndex) external onlyStudent activeCareer {
-        require(_examIndex < exams.length, "Exam index out of bounds");
-        Exam storage e = exams[_examIndex];
+    function rejectGrade(uint256 examIndex) external onlyStudent activeCareer {
+        require(examIndex < _exams.length, "Exam index out of bounds");
+        Exam storage e = _exams[examIndex];
 
         require(e.status == ExamStatus.PENDING, "Exam not pending");
 
         // Se rifiuta, lo stato diventa REJECTED e non si aggiungono crediti
         e.status = ExamStatus.REJECTED;
 
-        emit ExamRejected(e.name, e.grade);
+        emit ExamRejected(e.name, e.grade, e.grade, block.timestamp);
     }
 
     // Calcola la media pesata moltiplicata per 100 per mantenere 2 decimali
@@ -110,12 +127,12 @@ contract StudentCareer {
         uint256 totalWeightedGrades = 0;
         uint256 registeredCredits = 0;
 
-        for (uint256 i = 0; i < exams.length; i++) {
-            if (exams[i].status == ExamStatus.REGISTERED) {
+        for (uint256 i = 0; i < _exams.length; i++) {
+            if (_exams[i].status == ExamStatus.REGISTERED) {
                 totalWeightedGrades +=
-                    uint256(exams[i].grade) *
-                    uint256(exams[i].credits);
-                registeredCredits += uint256(exams[i].credits);
+                    uint256(_exams[i].grade) *
+                    uint256(_exams[i].credits);
+                registeredCredits += uint256(_exams[i].credits);
             }
         }
 
@@ -127,25 +144,25 @@ contract StudentCareer {
 
     // Calcolo della laurea
     function graduate() external onlyStudent activeCareer {
-        require(totalCredits >= 180, "Not enough credits to graduate");
+        require(_totalCredits >= 180, "Not enough credits to graduate");
 
         // Salviamo la media al momento della laurea
-        finalAverage = calculateAverage();
-        finalGrade = (finalAverage * 110) / 30;
+        _finalAverage = calculateAverage();
+        _finalGrade = (_finalAverage * 110) / 30;
 
-        // Il controllo if (finalGrade < 6600) finalGrade = 6600; non è necessario perché non è possibile una media sotto il 18
+        // Il controllo if (_finalGrade < 6600) _finalGrade = 6600; non è necessario perché non è possibile una media sotto il 18
 
-        if (finalGrade > 11000) {
-            finalGrade = 11000; // Limitiamo a 110
-            hasHonors = true; // Se supera 110, assegniamo la lode
+        if (_finalGrade > 11000) {
+            _finalGrade = 11000; // Limitiamo a 110
+            _hasHonors = true; // Se supera 110, assegniamo la lode
         }
-        isGraduated = true;
+        _isGraduated = true;
 
         emit StudentGraduated(block.timestamp);
-        emit FinalGradeSet(finalGrade, hasHonors);
+        emit FinalGradeSet(_finalGrade, _hasHonors);
     }
 
     function getExams() external view returns (Exam[] memory) {
-        return exams;
+        return _exams;
     }
 }

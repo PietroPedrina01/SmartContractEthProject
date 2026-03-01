@@ -4,58 +4,61 @@ pragma solidity ^0.8.28;
 import "./StudentCareer.sol";
 
 contract StudentFactory {
-    address public immutable owner;
-    mapping(address => address) public studentToContract;
-    address[] public allCareers;
+    address public immutable _owner;
+    mapping(address => address) public _studentToContract;
+    address[] public _allCareers;
 
     event CareerCreated(address indexed student, address contractAddress);
-    event GradeProposed(address indexed student, string subject, uint8 grade);
+    event GradeProposed(
+        address indexed student,
+        string subject,
+        uint8 grade,
+        uint8 credits
+    );
 
     modifier onlyOwner() {
-        require(msg.sender == owner, "Only owner allowed");
+        require(msg.sender == _owner, "Only owner allowed");
         _;
     }
 
     constructor() {
-        owner = msg.sender;
+        _owner = msg.sender;
     }
 
     // Creazione della carriera di uno studente
-    function createCareer(address _student) external onlyOwner {
+    function createCareer(address student) external onlyOwner {
         require(
-            studentToContract[_student] == address(0),
+            _studentToContract[student] == address(0),
             "Career already exists"
         );
 
-        StudentCareer newCareer = new StudentCareer(_student);
+        StudentCareer newCareer = new StudentCareer(student);
         address careerAddr = address(newCareer);
 
-        studentToContract[_student] = careerAddr;
-        allCareers.push(careerAddr);
+        _studentToContract[student] = careerAddr;
+        _allCareers.push(careerAddr);
 
-        emit CareerCreated(_student, careerAddr);
+        emit CareerCreated(student, careerAddr);
     }
 
     // Il professore PROPONE il voto richiamando StudentCareer
     function proposeGrade(
-        address _student,
-        string calldata _subject,
-        uint8 _grade,
-        uint8 _credits
+        address student,
+        string calldata subject,
+        uint8 grade,
+        uint8 credits
     ) external onlyOwner {
-        address careerAddress = studentToContract[_student];
+        address careerAddress = _studentToContract[student];
         require(careerAddress != address(0), "Student not found");
 
         // Chiamiamo la funzione di proposta, non di registrazione diretta
-        StudentCareer(careerAddress).proposeExam(_subject, _grade, _credits);
+        StudentCareer(careerAddress).proposeExam(subject, grade, credits);
 
-        emit GradeProposed(_student, _subject, _grade);
+        emit GradeProposed(student, subject, grade, credits);
     }
 
     // Helper per il frontend/script
-    function getCareerAddress(
-        address _student
-    ) external view returns (address) {
-        return studentToContract[_student];
+    function getCareerAddress(address student) external view returns (address) {
+        return _studentToContract[student];
     }
 }

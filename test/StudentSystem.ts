@@ -29,11 +29,11 @@ describe("Sistema Carriere - Integrazione", function () {
 		await careerContract.write.acceptGrade([0n], { account: student.account });
 
 		// 4. Verifica Crediti e Laurea
-		const credits = await careerContract.read.totalCredits();
+		const credits = await careerContract.read._totalCredits();
 		assert.equal(credits, 180n);
 
 		await careerContract.write.graduate({ account: student.account });
-		const isGraduated = await careerContract.read.isGraduated();
+		const isGraduated = await careerContract.read._isGraduated();
 		assert.strictEqual(isGraduated, true);
 	});
 
@@ -286,9 +286,9 @@ describe("Sistema Carriere - Integrazione", function () {
 
 		await careerContract.write.graduate({ account: student.account });
 
-		const finalAverage = await careerContract.read.finalAverage();
-		const finalGrade = await careerContract.read.finalGrade();
-		const hasHonors = await careerContract.read.hasHonors();
+		const finalAverage = await careerContract.read._finalAverage();
+		const finalGrade = await careerContract.read._finalGrade();
+		const hasHonors = await careerContract.read._hasHonors();
 		assert.equal(finalAverage, 1800n); // Media di 18.00
 		assert.equal(finalGrade, 6600n); // Voto di laurea minimo 66/110
 		assert.equal(hasHonors, false);
@@ -307,9 +307,9 @@ describe("Sistema Carriere - Integrazione", function () {
 
 		await careerContract.write.graduate({ account: student.account });
 
-		const finalAverage = await careerContract.read.finalAverage();
-		const finalGrade = await careerContract.read.finalGrade();
-		const hasHonors = await careerContract.read.hasHonors();
+		const finalAverage = await careerContract.read._finalAverage();
+		const finalGrade = await careerContract.read._finalGrade();
+		const hasHonors = await careerContract.read._hasHonors();
 		assert.equal(finalAverage, 3100n); // Media di 31.00
 		assert.equal(finalGrade, 11000n); // Voto di laurea massimo 110/110
 		assert.equal(hasHonors, true);
