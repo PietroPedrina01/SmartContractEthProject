@@ -151,12 +151,12 @@ WARNING: Funds sent on live network to accounts with publicly known private keys
 
 ```
 // apri un nuovo terminale
-npx hardhat ignition deploy ignition/modules/Counter.ts --network localhost  // deploy del modulo ignition su rete localhost
+npx hardhat ignition deploy ignition/modules/StudentModule.ts --network localhost  // deploy del modulo ignition su rete localhost
 
 // se volessi fare sepolia
 npx hardhat keystore set SEPOLIA_RPC_URL
 npx hardhat keystore set SEPOLIA_PRIVATE_KEY
-npx hardhat ignition deploy ignition/modules/Counter.ts --network sepolia
+npx hardhat ignition deploy ignition/modules/StudentModule.ts --network sepolia
 ```
 
 # Ciò che ha detto la prof
